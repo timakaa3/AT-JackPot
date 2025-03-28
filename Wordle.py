@@ -55,10 +55,8 @@ WORDS = [
 ]
 
 
-# Pick a random word
 secret_word = random.choice(WORDS)
 
-# Max attempts
 attempts = 6
 
 print("🎯 Welcome to Wordle (Python Edition)!")
@@ -91,16 +89,13 @@ def check_guess(guess, secret_word):
 
     return " ".join(result)
 
-# Game loop
 for attempt in range(1, attempts + 1):
     guess = input(f"Attempt {attempt}/{attempts}: ").lower()
 
-    # Validate input
     if len(guess) != 5 or not guess.isalpha():
         print("❌ Enter a valid 5-letter word!")
         continue
 
-    # Check the guess
     feedback = check_guess(guess, secret_word)
     print(feedback)
 
