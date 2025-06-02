@@ -1,5 +1,7 @@
 from flask import Flask, render_template
 import subprocess
+import threading
+import webbrowser
 
 app = Flask(__name__)
 
@@ -17,5 +19,9 @@ def start_aviator():
     subprocess.Popen(["python", "pygame_aviator.py"])
     return "Aviator стартира!"
 
+def open_browser():
+    webbrowser.open("http://127.0.0.1:5000")
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    threading.Timer(1.0, open_browser).start()  # Отваря браузъра автоматично
+    app.run(debug=False)
