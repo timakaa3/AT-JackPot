@@ -1,41 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="bg">
 <head>
-    <title>AT_JACKPOT</title>
+    <meta charset="UTF-8">
+    <title>AT JACKPOT</title>
     <style>
         body {
+            margin: 0;
+            padding: 0;
             text-align: center;
-            font-family: Arial, sans-serif;
-            background: #f8f8f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2b5876);
+            color: white;
         }
+
         header {
-            font-size: 2.5em;
-            margin: 30px 0 40px 0;
+            font-size: 3em;
+            margin: 40px 0 30px 0;
             font-weight: bold;
-            color: #222;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+            letter-spacing: 2px;
         }
+
         .games {
             display: flex;
             justify-content: center;
-            gap: 60px;
+            flex-wrap: wrap;
+            gap: 50px;
+            padding: 20px;
         }
+
         .game-img {
-            width: 350px;
-            height: 350px;
+            width: 300px;
+            height: 300px;
             object-fit: cover;
             border-radius: 20px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.2s;
-            margin: 0;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 3px solid #ffffff20;
         }
+
         .game-img:hover {
-            transform: scale(1.05);
+            transform: scale(1.06);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+        }
+
+        footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #ccc;
         }
     </style>
 </head>
 <body>
-    <header>AT_JACKPOT</header>
+    <header>🎰 AT JACKPOT 🎰</header>
+
     <div class="games">
         <img src="https://www.internetmatters.org/wp-content/uploads/2022/02/wordle-logo.webp"
              alt="Wordle Game"
@@ -47,6 +66,10 @@
              class="game-img"
              onclick="startGame('/start_aviator')">
     </div>
+
+    <footer>
+        &copy; 2025 AT JACKPOT. Всички права запазени.
+    </footer>
 
     <script>
         function startGame(route) {
