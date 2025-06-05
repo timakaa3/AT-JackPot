@@ -1,173 +1,215 @@
 import pygame
 import random
-import time
 import sys
 
 pygame.init()
-info = pygame.display.Info()
-WIDTH, HEIGHT = info.current_w, info.current_h
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-pygame.display.set_caption("Aviator Game")
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 
-# Цветове
+WIDTH, HEIGHT = screen.get_size()
+font = pygame.font.SysFont("Arial", 36)
+big_font = pygame.font.SysFont("Arial", 72)
+small_font = pygame.font.SysFont("Arial", 24)
+
 WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
 RED = (255, 0, 0)
-GRAY = (180, 180, 180)
+GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 
-# Зареждане на фон
-try:
-    bg_img = pygame.image.load(r"C:\Python_Workspace\PycharmProjects\pythonProject\AT_JACKPOT\space.png")
-    bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
-except:
-    print("Background not found!")
-    sys.exit()
-
-# Самолет (стрелка)
-plane_img = pygame.Surface((60, 40), pygame.SRCALPHA)
-pygame.draw.polygon(plane_img, WHITE, [(30, 0), (0, 20), (60, 20)])
-plane_img = pygame.transform.rotate(plane_img, 45)
-
-# Променливи
-balance = 100.0
+balance = 10000.00
 bet = 0.0
-bet_input = ""
-entering_bet = True
+crashed = False
+cash_out = False
+cash_out_multiplier = None
+has_cashed_out = False
 
-game_active = False
-cashed_out = False
-cashout_multiplier = 0.0
-start_time = None
-multiplier = 1.0
+multiplier = 1.00
+multiplier_speed = 0.005
+running = False
 history = []
-show_result = False
-center_reached = False
+crash_history = []
+show_cash_out_text = False
+input_mode = True
+input_text = ""
 
-# Движение на самолет
-plane_x = 100
-plane_y = HEIGHT // 2
-speed_x, speed_y = 3, 1.5
+stars = [[random.randint(0, WIDTH), random.randint(0, HEIGHT), random.randint(1, 3)] for _ in range(100)]
 
-# Движение на фона
-bg_scroll = 0
-bg_speed = 2
+def load_rocket_image():
+    try:
+        rocket_path = r"C:\Python_Workspace\PycharmProjects\pythonProject\AT_JACKPOT\rocket.png"
+        rocket_image = pygame.image.load(rocket_path)
+        return rocket_image
+    except:
+        return None
 
-def draw_text(text, x, y, size=36, color=WHITE):
-    font = pygame.font.SysFont("Arial", size)
-    screen.blit(font.render(text, True, color), (x, y))
+def create_rocket_sprite():
+    rocket = pygame.Surface((80, 60), pygame.SRCALPHA)
+    pygame.draw.ellipse(rocket, (200, 200, 255), (15, 25, 50, 15))
+    pygame.draw.polygon(rocket, (255, 255, 255), [(65, 30), (78, 25), (78, 35)])
+    pygame.draw.polygon(rocket, (150, 150, 255), [(20, 40), (35, 55), (50, 40)])
+    pygame.draw.polygon(rocket, (150, 150, 255), [(20, 20), (35, 5), (50, 20)])
+    pygame.draw.polygon(rocket, (255, 100, 0), [(15, 28), (5, 20), (5, 40), (15, 35)])
+    pygame.draw.polygon(rocket, (255, 255, 0), [(15, 30), (3, 25), (3, 35), (15, 32)])
+    return rocket
 
-def reset_game():
-    global multiplier, game_active, cashed_out, cashout_multiplier
-    global start_time, plane_x, plane_y, show_result, center_reached, bg_scroll
-    global balance
+rocket_image = load_rocket_image()
+plane = pygame.transform.scale(rocket_image, (80, 60)) if rocket_image else create_rocket_sprite()
 
-    if balance >= bet:
-        balance -= bet
-    else:
-        game_active = False
-        return
+def get_crash_color(multiplier):
+    if multiplier <= 1.0: return (173, 216, 230)
+    elif multiplier <= 1.5: return (135, 206, 235)
+    elif multiplier <= 2.0: return (100, 149, 237)
+    elif multiplier <= 3.0: return (255, 215, 0)
+    elif multiplier <= 5.0: return (255, 165, 0)
+    elif multiplier <= 10.0: return (255, 69, 0)
+    else: return (255, 0, 0)
 
-    multiplier = 1.0
-    game_active = True
-    cashed_out = False
-    cashout_multiplier = 0.0
-    show_result = False
-    center_reached = False
-    start_time = time.time()
-    plane_x, plane_y = 100, HEIGHT // 2
-    bg_scroll = 0
+def get_crash_point():
+    r = random.random()
+    if r < 0.003: return round(random.uniform(100, 200), 2)
+    elif r < 0.02: return round(random.uniform(20, 100), 2)
+    elif r < 0.07: return round(random.uniform(10, 20), 2)
+    elif r < 0.25: return round(random.uniform(2, 10), 2)
+    elif r < 0.65: return round(random.uniform(1.10, 2.00), 2)
+    else: return round(random.uniform(1.01, 1.10), 2)
 
-running = True
-while running:
-    screen.fill(BLACK)
-    screen.blit(bg_img, (bg_scroll, 0))
-    screen.blit(bg_img, (bg_scroll + WIDTH, 0))
-    bg_scroll -= bg_speed
-    if bg_scroll <= -WIDTH:
-        bg_scroll = 0
+def draw_gradient_background():
+    for y in range(HEIGHT):
+        color = (int(10 + y * 0.05), int(10 + y * 0.07), int(20 + y * 0.1))
+        pygame.draw.line(screen, color, (0, y), (WIDTH, y))
+
+def draw_stars():
+    for star in stars:
+        pygame.draw.circle(screen, WHITE, (star[0], star[1]), star[2])
+        star[0] -= star[2]
+        if star[0] < 0:
+            star[0] = WIDTH
+            star[1] = random.randint(0, HEIGHT)
+            star[2] = random.randint(1, 3)
+
+def draw_text_outline(text, font_obj, x, y, color, outline=BLACK):
+    surface = font_obj.render(text, True, outline)
+    for dx in [-2, 2]:
+        for dy in [-2, 2]:
+            screen.blit(surface, (x + dx, y + dy))
+    screen.blit(font_obj.render(text, True, color), (x, y))
+
+def draw_text(text, size, x, y, color=WHITE):
+    font_obj = pygame.font.SysFont("Arial", size)
+    text_surface = font_obj.render(text, True, color)
+    screen.blit(text_surface, (x, y))
+
+crash_point = get_crash_point()
+
+while True:
+    draw_gradient_background()
+    draw_stars()
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            running = False
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_s and not game_active:
-                entering_bet = True
-                bet_input = ""
-
-            if entering_bet:
+            if input_mode:
                 if event.key == pygame.K_RETURN:
                     try:
-                        new_bet = float(bet_input)
-                        if 0 < new_bet <= balance:
-                            bet = new_bet
-                            entering_bet = False
-                            reset_game()
+                        bet = float(input_text.replace(",", "."))
+                        if 0 < bet <= balance:
+                            input_mode = False
+                            input_text = ""
+                        else:
+                            input_text = ""
                     except:
-                        bet_input = ""
+                        input_text = ""
                 elif event.key == pygame.K_BACKSPACE:
-                    bet_input = bet_input[:-1]
-                elif event.unicode.isdigit() or (event.unicode == "." and '.' not in bet_input):
-                    bet_input += event.unicode
-
-            elif game_active:
-                if event.key == pygame.K_RETURN and not cashed_out:
-                    cashed_out = True
-                    cashout_multiplier = multiplier
-                    balance += round(bet * cashout_multiplier, 2)
-                    history.insert(0, (cashout_multiplier, True))
-                    show_result = True
-
-            elif not game_active:
-                if event.key == pygame.K_SPACE and not entering_bet and bet > 0:
-                    reset_game()
-
-    if game_active:
-        elapsed = time.time() - start_time
-        multiplier = round(pow(1.01, elapsed * 10), 2)  
-
-        raw_chance = 0.10 + (multiplier - 1) ** 1.1 * 0.025
-        crash_chance = min(raw_chance, 0.85)
-        if random.random() < crash_chance:
-            game_active = False 
-            history.insert(0, (multiplier, False))
-            show_result = True
-
-        if not center_reached:
-            if plane_x < WIDTH // 2 and plane_y > HEIGHT // 3:
-                plane_x += speed_x
-                plane_y -= speed_y
+                    input_text = input_text[:-1]
+                elif event.unicode.isdigit() or event.unicode in [".", ","]:
+                    input_text += event.unicode
             else:
-                center_reached = True
+                if event.key == pygame.K_SPACE and not running:
+                    if bet > 0 and balance >= bet:
+                        multiplier = 1.00
+                        crash_point = get_crash_point()
+                        running = True
+                        crashed = False
+                        cash_out = False
+                        has_cashed_out = False
+                        show_cash_out_text = False
 
-    # Самолет
-    screen.blit(plane_img, (plane_x, plane_y))
+                if event.key == pygame.K_RETURN and running and not crashed and not has_cashed_out:
+                    cash_out = True
+                    has_cashed_out = True
+                    show_cash_out_text = True
+                    cash_out_multiplier = multiplier
+                    profit = round(bet * (multiplier - 1), 2)
+                    balance += profit
+                    history.append((round(cash_out_multiplier, 2), True))
 
-    # Информация
-    draw_text(f"Balance: {balance:.2f} лв.", 30, 30)
-    draw_text(f"Multiplier: x{multiplier:.2f}", WIDTH // 2 - 100, 50, 50, GREEN)
+                if event.key == pygame.K_s and not running:
+                    input_mode = True
 
-    # Статус
-    if cashed_out:
-        draw_text(f"Cashed Out at x{cashout_multiplier:.2f}", WIDTH // 2 - 180, HEIGHT // 2, 50, GREEN)
-    elif show_result and not game_active:
-        draw_text("CRASHED!", WIDTH // 2 - 100, HEIGHT // 2, 60, RED)
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
 
-    # История
-    draw_text("History:", WIDTH - 200, 30)
-    for i, (m, win) in enumerate(history[:6]):
-        draw_text(f"x{m:.2f}", WIDTH - 200, 70 + i * 30, 30, GREEN if win else RED)
+    if input_mode:
+        draw_text("Enter bet (S to edit): ", 36, 50, 50)
+        draw_text(input_text + " лв", 36, 50, 100, GREEN)
+    else:
+        draw_text(f"Balance: {balance:.2f} лв", 36, 50, 50)
+        draw_text(f"Bet: {bet:.2f} лв", 36, 50, 100)
 
-    # Инструкции
-    draw_text("ESC: Quit | S: Change Bet | SPACE: New Round | ENTER: Cash Out", 30, HEIGHT - 40, 28, GRAY)
+    if running and not crashed:
+        multiplier += multiplier_speed * multiplier
+        if multiplier >= crash_point:
+            crashed = True
+            running = False
+            crash_history.append(round(multiplier, 2))
+            if not has_cashed_out:
+                history.append((round(multiplier, 2), False))
+                balance -= bet
 
-    # Въвеждане на залог
-    if entering_bet:
-        draw_text(f"Enter bet (лв): {bet_input}", WIDTH // 2 - 150, HEIGHT // 2, 40, WHITE)
+    if crashed and not has_cashed_out:
+        draw_text(f"CRASHED AT {multiplier:.2f}x", 48, WIDTH // 2 - 150, HEIGHT // 2 - 100, RED)
+
+    if show_cash_out_text:
+        draw_text(f"CASHED OUT at {cash_out_multiplier:.2f}x", 48, WIDTH // 2 - 200, HEIGHT // 2 - 100, GREEN)
+
+    if running:
+        plane_x = int(WIDTH // 2 + (multiplier * 15))
+        plane_y = int(HEIGHT // 2 - (multiplier * 10))
+        plane_x = min(plane_x, WIDTH // 2 + 300)
+        plane_y = max(plane_y, HEIGHT // 2 - 300)
+        screen.blit(plane, (plane_x, plane_y))
+
+    draw_text_outline(f"{multiplier:.2f}x", big_font, WIDTH // 2 - 80, 20, WHITE)
+
+    hx = WIDTH - 300
+    draw_text("History:", 24, hx, 50)
+    for i, (mult, is_cash_out) in enumerate(history[-10:][::-1]):
+        if is_cash_out:
+            color = GREEN
+            label = f"OUT (+{bet * (mult - 1):.2f} лв)"
+        else:
+            color = RED
+            label = f"CRASH (-{bet:.2f} лв)"
+        draw_text(f"{mult:.2f}x {label}", 20, hx, 80 + i * 25, color)
+
+    if crash_history:
+        draw_text("Crash History:", 20, 50, 200)
+        crash_y = 230
+        for i, mult in enumerate(crash_history[-5:]):
+            crash_color = get_crash_color(mult)
+            crash_x = 50 + i * 80
+            pygame.draw.circle(screen, crash_color, (crash_x + 25, crash_y + 15), 20)
+            pygame.draw.circle(screen, BLACK, (crash_x + 25, crash_y + 15), 20, 2)
+            text_surface = small_font.render(f"{mult:.1f}", True, BLACK)
+            text_rect = text_surface.get_rect(center=(crash_x + 25, crash_y + 15))
+            screen.blit(text_surface, text_rect)
+
+    keys_info = "[S] Set Bet   [SPACE] Start   [ENTER] Cash Out   [ESC] Exit"
+    draw_text(keys_info, 24, 20, HEIGHT - 40, WHITE)
 
     pygame.display.flip()
     clock.tick(60)
-
-pygame.quit()
