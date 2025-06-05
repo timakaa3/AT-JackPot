@@ -5,12 +5,10 @@ import json
 
 pygame.init()
 
-# Създаване на фулскрийн прозорец
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 WIDTH, HEIGHT = screen.get_size()
 pygame.display.set_caption("Wordle (Fullscreen Edition)")
 
-# Цветове
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (83, 141, 78)
@@ -18,7 +16,6 @@ YELLOW = (181, 159, 59)
 GRAY = (120, 124, 126)
 DARK_GRAY = (60, 60, 60)
 
-# Шрифтове
 FONT = pygame.font.Font(None, 80)
 LARGE_FONT = pygame.font.Font(None, 100)
 
@@ -120,6 +117,5 @@ def check_guess(guess, word):
 
     return colors
 
-# Главен цикъл
 while True:
     game_loop()
