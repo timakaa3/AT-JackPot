@@ -19,9 +19,14 @@ def start_aviator():
     subprocess.Popen(["python", "pygame_aviator.py"])
     return "Aviator стартира!"
 
+@app.route('/start_slots')
+def start_slots():
+    subprocess.Popen(["python", "pygame_slots.py"])
+    return "Slots стартира!"
+
 def open_browser():
     webbrowser.open("http://127.0.0.1:5000")
 
 if __name__ == "__main__":
-    threading.Timer(1.0, open_browser).start()  # Отваря браузъра автоматично
+    threading.Timer(1.0, open_browser).start()
     app.run(debug=False)
