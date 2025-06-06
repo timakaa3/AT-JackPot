@@ -26,17 +26,16 @@ has_cashed_out = False
 multiplier = 1.00
 multiplier_speed = 0.005
 running = False
-history = []
+history = []  # (multiplier, is_cash_out, used_bet)
 crash_history = []
 show_cash_out_text = False
 input_mode = True
 input_text = ""
-
 stars = [[random.randint(0, WIDTH), random.randint(0, HEIGHT), random.randint(1, 3)] for _ in range(100)]
 
 def load_rocket_image():
     try:
-        rocket_path = r"C:\Python_Workspace\PycharmProjects\pythonProject\AT_JACKPOT\rocket.png"
+        rocket_path = r"C:\Python_Workspace\PycharmProjects\pythonProject\AT_JACKPOT\images\rocket.png"
         rocket_image = pygame.image.load(rocket_path)
         return rocket_image
     except:
@@ -87,19 +86,13 @@ def draw_stars():
             star[1] = random.randint(0, HEIGHT)
             star[2] = random.randint(1, 3)
 
-def draw_text_outline(text, font_obj, x, y, color, outline=BLACK):
-    surface = font_obj.render(text, True, outline)
-    for dx in [-2, 2]:
-        for dy in [-2, 2]:
-            screen.blit(surface, (x + dx, y + dy))
-    screen.blit(font_obj.render(text, True, color), (x, y))
-
 def draw_text(text, size, x, y, color=WHITE):
     font_obj = pygame.font.SysFont("Arial", size)
     text_surface = font_obj.render(text, True, color)
     screen.blit(text_surface, (x, y))
 
 crash_point = get_crash_point()
+current_bet = 0.0
 
 while True:
     draw_gradient_background()
@@ -129,6 +122,7 @@ while True:
             else:
                 if event.key == pygame.K_SPACE and not running:
                     if bet > 0 and balance >= bet:
+                        current_bet = bet
                         multiplier = 1.00
                         crash_point = get_crash_point()
                         running = True
@@ -142,9 +136,9 @@ while True:
                     has_cashed_out = True
                     show_cash_out_text = True
                     cash_out_multiplier = multiplier
-                    profit = round(bet * (multiplier - 1), 2)
+                    profit = round(current_bet * (multiplier - 1), 2)
                     balance += profit
-                    history.append((round(cash_out_multiplier, 2), True))
+                    history.append((round(cash_out_multiplier, 2), True, current_bet))
 
                 if event.key == pygame.K_s and not running:
                     input_mode = True
@@ -167,8 +161,8 @@ while True:
             running = False
             crash_history.append(round(multiplier, 2))
             if not has_cashed_out:
-                history.append((round(multiplier, 2), False))
-                balance -= bet
+                history.append((round(multiplier, 2), False, current_bet))
+                balance -= current_bet
 
     if crashed and not has_cashed_out:
         draw_text(f"CRASHED AT {multiplier:.2f}x", 48, WIDTH // 2 - 150, HEIGHT // 2 - 100, RED)
@@ -183,17 +177,17 @@ while True:
         plane_y = max(plane_y, HEIGHT // 2 - 300)
         screen.blit(plane, (plane_x, plane_y))
 
-    draw_text_outline(f"{multiplier:.2f}x", big_font, WIDTH // 2 - 80, 20, WHITE)
+    draw_text(f"{multiplier:.2f}x", 72, WIDTH // 2 - 80, 20, WHITE)
 
     hx = WIDTH - 300
     draw_text("History:", 24, hx, 50)
-    for i, (mult, is_cash_out) in enumerate(history[-10:][::-1]):
+    for i, (mult, is_cash_out, used_bet) in enumerate(history[-10:][::-1]):
         if is_cash_out:
             color = GREEN
-            label = f"OUT (+{bet * (mult - 1):.2f} лв)"
+            label = f"OUT (+{used_bet * (mult - 1):.2f} лв)"
         else:
             color = RED
-            label = f"CRASH (-{bet:.2f} лв)"
+            label = f"CRASH (-{used_bet:.2f} лв)"
         draw_text(f"{mult:.2f}x {label}", 20, hx, 80 + i * 25, color)
 
     if crash_history:
